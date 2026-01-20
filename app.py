@@ -5,6 +5,7 @@ import json
 import re
 from extractResultOutbound import parse_dialog_clean, parseAITag
 from llmServer import llm_api
+from utils import postprocess_intention_keep_score_only,strip_quotes
 
 app = FastAPI(title="通话质检服务", version="1.0.0")
 
@@ -162,8 +163,8 @@ ALL_TAGS = {'装机单竣工': {'Q1-B': ['接通', '接通未评价'],
 
 PROMPT_INTENTION = '''
     已知外呼系统和用户的对话为{},
-    用户的待选意图为{},
-    请问用户的真实意图是啥，只需回答待选意图{}中的某种,不需要其他内容
+    用户的待选意图为{},（注意稽核Q1时，如果用户意图愿意接受问卷算接通，如果出现拒绝意图或者啥也没说算接通未评价）
+    请问用户的真实意图是啥，只需回答待选意图{}中的某种,不需要其他多余内容
 '''
 
 PROMPT_ANSWER = '''
@@ -191,7 +192,8 @@ class CallCheckRequest(BaseModel):
 class CheckResult(BaseModel):
     """单个问题的检查结果"""
     question_key: str
-    dialogue_text: List[Dict]
+    dialogue_json: List[dict]
+    dialogue_text: str
     ai_tag: str
     check_tag_intention: str
     check_tag_answer: str
@@ -213,6 +215,8 @@ def process_check_answer(answer: str) -> str:
         return "不正确"
     else:
         return "不确定"
+
+
 
 
 @app.post("/api/v1/check_call", response_model=CallCheckResponse)
@@ -252,36 +256,55 @@ async def check_call(request: CallCheckRequest):
                 if item['Q'] in key:  # 可以改成模糊匹配: if key in item['Q']
                     # 获取待选意图
                     available_tags = ALL_TAGS[request.scene_type][key]
+                    pre_dialog_str = ""
+                    if "default" in item['Q']:
+                        prev_node = item['Q'].split("-default")[0]
+                        for dialog_item in dialog:
+                            if dialog_item['Q'] == prev_node:
+                                pre_dialog_str = json.dumps(dialog_item['dialogue'], ensure_ascii=False)
+                                break
+
+                    q1_complement_str = ""
+                    if item["Q"]=="Q1" and len(dialog)>1 and "Q1-" in dialog[1]["Q"]:
+                        q1_complement_str = json.dumps(dialog[1]['dialogue'], ensure_ascii=False)
                     
                     # 调用LLM检查意图
                     response_intention = llm_api(
                         PROMPT_INTENTION.format(
-                            json.dumps(item['dialogue'], ensure_ascii=False),
+                            pre_dialog_str + json.dumps(item['dialogue'], ensure_ascii=False)+q1_complement_str,
                             json.dumps(available_tags, ensure_ascii=False),
                             json.dumps(available_tags, ensure_ascii=False)
                         )
                     )
                     
                     # 调用LLM检查答案
-                    response_answer = llm_api(
-                        PROMPT_ANSWER.format(
-                            json.dumps(item['dialogue'], ensure_ascii=False),
-                            json.dumps(available_tags, ensure_ascii=False),
-                            tag
-                        )
-                    )
+                    # response_answer = llm_api(
+                    #     PROMPT_ANSWER.format(
+                    #         json.dumps(item['dialogue'], ensure_ascii=False),
+                    #         json.dumps(available_tags, ensure_ascii=False),
+                    #         tag
+                    #     )
+                    # )
                     
                     # 提取结果
                     intention_result = response_intention.json()["choices"][0]["message"]["content"]
-                    answer_result = response_answer.json()["choices"][0]["message"]["content"]
+                    # answer_result = response_answer.json()["choices"][0]["message"]["content"]
                     
                     # 标准化答案
-                    processed_answer = process_check_answer(answer_result)
+                    # processed_answer = process_check_answer(answer_result)
+                    intention_result = strip_quotes(intention_result)
+                    intention_result = postprocess_intention_keep_score_only(intention_result)
+
                     
+                    if intention_result == tag:
+                        processed_answer = "正确"
+                    else:
+                        processed_answer = "不正确"
                     # 添加检查结果
                     check_results.append(CheckResult(
                         question_key=key,
-                        dialogue_text=item['dialogue'],
+                        dialogue_json=item['dialogue'],
+                        dialogue_text = pre_dialog_str + json.dumps(item['dialogue'], ensure_ascii=False)+q1_complement_str,
                         ai_tag=tag,
                         check_tag_intention=intention_result,
                         check_tag_answer=processed_answer

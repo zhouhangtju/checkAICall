@@ -23,9 +23,9 @@ import json
 
 import re
 
-DEFAULT_PROMPT = "不好意思，我没有听清，请您再详细说明一下?"
+DEFAULT_PROMPT = {"不好意思，我没有听清，请您再详细说明一下?","不好意思，我没有听清，能否请您再详细说明一下?"}
 
-def annotate_default_prompt(text: str, default_prompt: str = DEFAULT_PROMPT) -> str:
+def annotate_default_prompt(text: str, default_prompt: set = DEFAULT_PROMPT) -> str:
     """
     在解析前给默认兜底话术补充节点标识：{last_q}-default
     规则：
@@ -71,8 +71,8 @@ def annotate_default_prompt(text: str, default_prompt: str = DEFAULT_PROMPT) -> 
                 continue
 
             # 命中默认话术才补
-            if content == default_prompt and last_q:
-                out.append(f"AI：{last_q}-default:{default_prompt}")
+            if content in default_prompt and last_q:
+                out.append(f"AI：{last_q}-default:{content}")
                 continue
 
         out.append(raw)
@@ -173,7 +173,10 @@ def parseAITag(text):
     '''
     result = {}
     for tag in  text.split(","):
-        result[f"{tag.split(':')[0]}"] = tag.split(":")[1]
+        try:
+            result[f"{tag.split(':')[0]}"] = tag.split(":")[1]
+        except:
+            continue
     return result
 
 
@@ -241,9 +244,28 @@ Q7:好的，感谢您参与本次调研，敬请您在后续的满意度调研�
 # AI：0.1秒
 # Q7:好的，感谢您参与本次调研，敬请您在后续的满意度调研中给予10分好评，祝您生活愉快再见！
 # '''
+    dialog_str = '''AI：Q1:您好，我是浙江移动宽带服务专员，现在浙江移动推出免费网络体检活动，工作人员会根据您方便时间上门，如果您需要专业人员上门处理，可以直接跟我说需要
+客户：你在吗？
+AI：不好意思，我没有听清，能否请您再详细说明一下?
+客户：免费吗？你说亏带什么免费吧。
+AI：0.1秒
+Q2:请问您什么时间方便呀，我帮您做个登记，具体上门时间以装维与您预约时间为准。
+客户：你好像不是中国人啊。
+AI：不好意思，我没有听清，能否请您再详细说明一下?
+客户：啊，我讲的话你听。
+客户：我问你，你打这个电话什么意思？
+AI：不好意思，我没有听清，能否请您再详细说明一下?
+客户：操你妈逼。
+AI：打扰了，下次如有满意度调研，请帮忙都打十分！祝您生活愉快，再见！
+0.1秒
+'''
     dialog_str = annotate_default_prompt(dialog_str)
+
     print("-----annotate_default_prompt后的内容------" + dialog_str)
-    # parsed = parse_dialog_clean(dialog_str)
+    parsed = parse_dialog_clean(dialog_str)
+    ai_tag = parseAITag("Q1-default:质差需上门,用户厌恶，骂脏话")
+    print(ai_tag)
+
     # print(json.dumps(parsed, ensure_ascii=False, indent=2))
 
 
