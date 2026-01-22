@@ -1,8 +1,12 @@
 import pandas as pd
 import requests
-df = pd.read_excel("./data/20260108通话记录.xlsx", sheet_name="装机单")
+# df = pd.read_excel("./data/20260108通话记录.xlsx", sheet_name="装机单")
 # df = pd.read_excel("./data/zjyd01_测试3-检查_通话记录_202601221153_zjyd01.xlsx")
-scene_type = "装机单竣工"
+# df = pd.read_excel("./data/zjyd01_测试.xlsx")
+df = pd.read_excel("./data/zjyd01_测试任务_03.xlsx")
+
+
+scene_type = "投诉单报结"
 for i,row in df.iterrows():
     payload = {
         "robot_tag": "" if pd.isna(row["机器人标签"]) else str(row["机器人标签"]),

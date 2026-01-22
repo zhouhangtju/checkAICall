@@ -258,6 +258,8 @@ async def check_call(request: CallCheckRequest):
                 # 匹配问题
                 if item['Q'] == key:  # 可以改成模糊匹配: if key in item['Q']
                     # 获取待选意图
+                    if item["Q"]=='Q7-非满分-default':
+                        pass
                     available_tags = ALL_TAGS[request.scene_type][key]
                     pre_dialog_str = ""
                     if "default" in item['Q']:

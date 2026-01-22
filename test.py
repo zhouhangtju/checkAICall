@@ -21,7 +21,8 @@ PROMPT_ANSWER = '''
 # df = pd.read_excel("/Users/hzhou/dev-projects/checkAICall/data/通话记录.xlsx")
 # df = pd.read_excel("./data/质差派单.xlsx")
 # df = pd.read_excel("./data/20260108通话记录.xlsx", sheet_name="装机单")
-df = pd.read_excel("./data/zjyd01_测试3-检查_通话记录_202601221153_zjyd01.xlsx")
+# df = pd.read_excel("./data/zjyd01_测试3-检查_通话记录_202601221153_zjyd01.xlsx")
+df = pd.read_excel("./data/zjyd01_测试.xlsx")
 
 
 
