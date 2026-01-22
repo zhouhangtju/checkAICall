@@ -1,9 +1,10 @@
+from tabnanny import check
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import json
 import re
-from extractResultOutbound import parse_dialog_clean, parseAITag
+from extractResultOutbound import parse_dialog_clean, parseAITag, annotate_default_prompt
 from llmServer import llm_api
 from utils import postprocess_intention_keep_score_only,strip_quotes
 
@@ -194,6 +195,7 @@ class CheckResult(BaseModel):
     question_key: str
     dialogue_json: List[dict]
     dialogue_text: str
+    check_prompt:str
     ai_tag: str
     check_tag_intention: str
     check_tag_answer: str
@@ -233,7 +235,8 @@ async def check_call(request: CallCheckRequest):
         clean_text = request.call_text.replace("_x000D_", "")
         
         # 解析对话和AI标签
-        dialog = parse_dialog_clean(clean_text)
+        annotated_dialog = annotate_default_prompt(clean_text)
+        dialog = parse_dialog_clean(annotated_dialog)
         ai_tag = parseAITag(request.robot_tag)
         
         # 检查场景类型是否存在
@@ -253,7 +256,7 @@ async def check_call(request: CallCheckRequest):
                 
             for item in dialog:
                 # 匹配问题
-                if item['Q'] in key:  # 可以改成模糊匹配: if key in item['Q']
+                if item['Q'] == key:  # 可以改成模糊匹配: if key in item['Q']
                     # 获取待选意图
                     available_tags = ALL_TAGS[request.scene_type][key]
                     pre_dialog_str = ""
@@ -305,6 +308,10 @@ async def check_call(request: CallCheckRequest):
                         question_key=key,
                         dialogue_json=item['dialogue'],
                         dialogue_text = pre_dialog_str + json.dumps(item['dialogue'], ensure_ascii=False)+q1_complement_str,
+                        check_prompt=PROMPT_INTENTION.format(
+                            pre_dialog_str + json.dumps(item['dialogue'], ensure_ascii=False)+q1_complement_str,
+                            json.dumps(available_tags, ensure_ascii=False),
+                            json.dumps(available_tags, ensure_ascii=False)),
                         ai_tag=tag,
                         check_tag_intention=intention_result,
                         check_tag_answer=processed_answer

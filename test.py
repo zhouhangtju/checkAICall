@@ -20,7 +20,9 @@ PROMPT_ANSWER = '''
 # df = pd.read_excel("./data/装机单竣工回访_通话记录1022.xlsx")
 # df = pd.read_excel("/Users/hzhou/dev-projects/checkAICall/data/通话记录.xlsx")
 # df = pd.read_excel("./data/质差派单.xlsx")
-df = pd.read_excel("./data/20260108通话记录.xlsx", sheet_name="装机单")
+# df = pd.read_excel("./data/20260108通话记录.xlsx", sheet_name="装机单")
+df = pd.read_excel("./data/zjyd01_测试3-检查_通话记录_202601221153_zjyd01.xlsx")
+
 
 
 df = df.replace("_x000D_", "", regex=True)
@@ -107,4 +109,4 @@ for i,row in df.iterrows():
     # print(check_res)
     # break
 
-df.to_excel(f"./data/{scene}-check.xlsx")
+df.to_excel(f"./data/{scene}-check2.xlsx")
