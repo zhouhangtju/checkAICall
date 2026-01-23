@@ -4,9 +4,13 @@ import requests
 # df = pd.read_excel("./data/zjyd01_测试3-检查_通话记录_202601221153_zjyd01.xlsx")
 # df = pd.read_excel("./data/zjyd01_测试.xlsx")
 df = pd.read_excel("./data/zjyd01_测试任务_03.xlsx")
+# df = pd.read_excel("./data/zjyd01_测试任务_04.xlsx")
+
 
 
 scene_type = "投诉单报结"
+# scene_type = "装机单竣工"
+
 for i,row in df.iterrows():
     payload = {
         "robot_tag": "" if pd.isna(row["机器人标签"]) else str(row["机器人标签"]),
